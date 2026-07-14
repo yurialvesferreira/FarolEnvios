@@ -3,7 +3,7 @@
 Boilerplate plugável para **cotação de frete via API dos Correios (CWS)**, com:
 
 - **API REST** mínima (`POST /api/quotes`) para plugar em qualquer sistema web;
-- **Provider mock** que funciona sem credenciais — `npm run dev` e já dá para validar;
+- **Provider mock** que funciona sem credenciais `npm run dev` e já dá para validar;
 - **Provider Correios** real (api.correios.com.br), ativado por variável de ambiente;
 - **Frontend mínimo** em vanilla JS para as primeiras validações;
 - Núcleo de domínio desacoplado (validação com Zod, cache em memória, dinheiro em centavos).
@@ -21,7 +21,7 @@ Sem configurar nada, o provider é o **mock**: preços plausíveis e determinís
 
 ## Usando a API dos Correios de verdade
 
-A API pública antiga dos Correios foi descontinuada. A atual (**CWS — Correios
+A API pública antiga dos Correios foi descontinuada. A atual (**CWS - Correios
 Web Services**) exige **contrato** e credenciais geradas em
 [cws.correios.com.br](https://cws.correios.com.br):
 
@@ -35,7 +35,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Códigos de serviço padrão: `03220` (SEDEX contrato) e `03298` (PAC contrato) —
+Códigos de serviço padrão: `03220` (SEDEX contrato) e `03298` (PAC contrato)
 ajuste em `CORREIOS_SERVICES` conforme o seu contrato.
 
 ## API
@@ -45,16 +45,16 @@ ajuste em `CORREIOS_SERVICES` conforme o seu contrato.
 ```jsonc
 // request
 {
-  "originZip": "01310-100",        // com ou sem hífen
+  "originZip": "01310-100", // com ou sem hífen
   "destinationZip": "90010150",
   "package": {
-    "weightGrams": 800,            // 1 a 30.000
-    "lengthCm": 20,                // 15 a 100
-    "widthCm": 15,                 // 10 a 100
-    "heightCm": 10                 // 1 a 100
+    "weightGrams": 800, // 1 a 30.000
+    "lengthCm": 20, // 15 a 100
+    "widthCm": 15, // 10 a 100
+    "heightCm": 10, // 1 a 100
   },
-  "declaredValueCents": 15000,     // opcional (seguro)
-  "serviceCodes": ["03220"]        // opcional; omite = todos os configurados
+  "declaredValueCents": 15000, // opcional (seguro)
+  "serviceCodes": ["03220"], // opcional; omite = todos os configurados
 }
 ```
 
@@ -65,11 +65,11 @@ ajuste em `CORREIOS_SERVICES` conforme o seu contrato.
     {
       "serviceCode": "03298",
       "serviceName": "PAC",
-      "priceCents": 2134,          // dinheiro sempre em centavos (int)
+      "priceCents": 2134, // dinheiro sempre em centavos (int)
       "deadlineBusinessDays": 6,
-      "provider": "mock"
-    }
-  ]
+      "provider": "mock",
+    },
+  ],
 }
 ```
 
@@ -78,7 +78,7 @@ Erros: `422` (payload inválido, com lista `issues`), `502` (falha no provider),
 
 ### `GET /api/health`
 
-`{ "status": "ok", "provider": "mock" }` — útil para o frontend exibir qual
+`{ "status": "ok", "provider": "mock" }` útil para o frontend exibir qual
 provider está ativo e para probes de liveness.
 
 ## Arquitetura
@@ -103,7 +103,7 @@ test/                        # vitest
 
 - **Porta e adapters (hexagonal):** o resto do sistema só conhece
   `ShippingProvider`. Para adicionar Jadlog, Loggi, Melhor Envio etc., crie um
-  adapter em `src/providers/` e registre no factory de `src/index.ts` — nada
+  adapter em `src/providers/` e registre no factory de `src/index.ts` nada
   mais muda.
 - **Dinheiro em centavos (inteiros):** evita erros de ponto flutuante. A
   conversão do formato `"1.234,56"` dos Correios acontece na borda do adapter.
@@ -117,15 +117,15 @@ test/                        # vitest
   ainda retornam; só falha se nenhum cotar.
 - **Camada HTTP descartável:** para usar dentro de um app Express/Nest/Next
   existente, importe `QuoteService` + um provider e exponha na sua própria
-  rota — a pasta `http/` é só uma conveniência.
+  rota a pasta `http/` é só uma conveniência.
 
 ## Como plugar no seu sistema
 
-**Opção A — microserviço:** rode o FarolEnvios como está e chame
+**Opção A - microserviço:** rode o FarolEnvios como está e chame
 `POST /api/quotes` do seu backend ou frontend (CORS já habilitado; restrinja o
 `origin` em produção em `src/http/server.ts`).
 
-**Opção B — biblioteca:** importe o núcleo no seu código:
+**Opção B - biblioteca:** importe o núcleo no seu código:
 
 ```ts
 import { QuoteService } from "./core/quote-service.js";
@@ -139,23 +139,27 @@ const service = new QuoteService(
   { cacheTtlSeconds: 300 },
 );
 
-const quotes = await service.getQuotes({ originZip, destinationZip, package: pkg });
+const quotes = await service.getQuotes({
+  originZip,
+  destinationZip,
+  package: pkg,
+});
 ```
 
 ## Scripts
 
-| Comando             | O que faz                                  |
-| ------------------- | ------------------------------------------ |
-| `npm run dev`       | servidor com reload (tsx watch)            |
-| `npm run build`     | compila TypeScript para `dist/`            |
-| `npm start`         | roda o build de produção                   |
-| `npm test`          | testes (vitest)                            |
-| `npm run typecheck` | checagem de tipos sem emitir               |
+| Comando             | O que faz                       |
+| ------------------- | ------------------------------- |
+| `npm run dev`       | servidor com reload (tsx watch) |
+| `npm run build`     | compila TypeScript para `dist/` |
+| `npm start`         | roda o build de produção        |
+| `npm test`          | testes (vitest)                 |
+| `npm run typecheck` | checagem de tipos sem emitir    |
 
 ## Limitações conhecidas (por ser boilerplate)
 
 - Cache em memória (não compartilhado entre instâncias);
-- Sem rate limiting nem autenticação no endpoint público — adicione antes de
+- Sem rate limiting nem autenticação no endpoint público adicione antes de
   expor na internet;
 - Prazo (`/prazo`) e preço (`/preco`) são duas chamadas por serviço no CWS;
 - Sem retry/backoff nas chamadas aos Correios (timeout simples de 10s).
