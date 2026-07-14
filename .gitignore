@@ -1,7 +1,6 @@
 node_modules/
 dist/
 .env
-.github/
 .vscode/
 *.log
 .DS_Store
