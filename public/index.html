@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FarolEnvios — Cotação de frete</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>🔦 FarolEnvios</h1>
+      <p class="subtitle">Cotação de frete via Correios — <span id="provider-badge" class="badge">…</span></p>
+    </header>
+
+    <form id="quote-form" class="card" novalidate>
+      <div class="grid">
+        <label class="field">
+          <span>CEP de origem</span>
+          <input name="originZip" inputmode="numeric" placeholder="01310-100" required value="01310-100" />
+        </label>
+        <label class="field">
+          <span>CEP de destino</span>
+          <input name="destinationZip" inputmode="numeric" placeholder="90010-150" required value="90010-150" />
+        </label>
+      </div>
+
+      <div class="grid grid-4">
+        <label class="field">
+          <span>Peso (g)</span>
+          <input name="weightGrams" type="number" min="1" max="30000" value="800" required />
+        </label>
+        <label class="field">
+          <span>Comprimento (cm)</span>
+          <input name="lengthCm" type="number" min="15" max="100" value="20" required />
+        </label>
+        <label class="field">
+          <span>Largura (cm)</span>
+          <input name="widthCm" type="number" min="10" max="100" value="15" required />
+        </label>
+        <label class="field">
+          <span>Altura (cm)</span>
+          <input name="heightCm" type="number" min="1" max="100" value="10" required />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Valor declarado (R$, opcional)</span>
+        <input name="declaredValue" type="number" min="0" step="0.01" placeholder="0,00" />
+      </label>
+
+      <button type="submit" id="submit-btn">Cotar frete</button>
+    </form>
+
+    <section id="feedback" class="feedback" hidden></section>
+
+    <section id="results" class="results" hidden>
+      <h2>Opções de envio</h2>
+      <div id="quotes-list" class="quotes"></div>
+    </section>
+
+    <footer class="footer">
+      Boilerplate — POST <code>/api/quotes</code> para plugar no seu sistema.
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
