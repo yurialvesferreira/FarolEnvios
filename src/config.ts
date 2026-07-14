@@ -4,6 +4,11 @@ export interface AppConfig {
   port: number;
   provider: "mock" | "correios";
   quoteCacheTtlSeconds: number;
+  security: {
+    corsOrigins: string[];
+    trustProxy: boolean;
+    rateLimit: { windowSeconds: number; max: number };
+  };
   correios: {
     user: string;
     accessCode: string;
@@ -25,6 +30,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port: Number(env.PORT ?? 3000),
     provider,
     quoteCacheTtlSeconds: Number(env.QUOTE_CACHE_TTL_SECONDS ?? 300),
+    security: {
+      corsOrigins: (env.CORS_ORIGINS ?? "*")
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+      trustProxy: env.TRUST_PROXY === "true",
+      rateLimit: {
+        windowSeconds: Number(env.RATE_LIMIT_WINDOW_SECONDS ?? 60),
+        max: Number(env.RATE_LIMIT_MAX ?? 60),
+      },
+    },
     correios: {
       user: env.CORREIOS_USER ?? "",
       accessCode: env.CORREIOS_ACCESS_CODE ?? "",

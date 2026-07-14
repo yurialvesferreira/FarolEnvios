@@ -24,7 +24,21 @@ const quoteService = new QuoteService(provider, {
   cacheTtlSeconds: config.quoteCacheTtlSeconds,
 });
 
-const app = createApp({ quoteService, providerName: provider.name });
+if (
+  config.provider === "correios" &&
+  config.security.corsOrigins.includes("*")
+) {
+  console.warn(
+    "[segurança] CORS aberto (*) com o provider real dos Correios. " +
+      "Defina CORS_ORIGINS com os domínios do seu sistema antes de expor em produção.",
+  );
+}
+
+const app = createApp({
+  quoteService,
+  providerName: provider.name,
+  security: config.security,
+});
 
 app.listen(config.port, () => {
   console.log(

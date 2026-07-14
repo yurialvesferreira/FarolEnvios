@@ -146,6 +146,16 @@ const quotes = await service.getQuotes({
 });
 ```
 
+## Segurança
+
+O boilerplate sai endurecido por padrão: validação estrita de entrada (Zod),
+cabeçalhos de segurança (helmet), rate limiting por IP, limite de body,
+CORS configurável por ambiente, timeouts nas chamadas externas e `npm audit`
+limpo com Dependabot habilitado.
+
+As decisões de segurança, os vetores considerados e o **checklist antes de
+expor em produção** estão documentados em [SECURITY.md](SECURITY.md).
+
 ## Scripts
 
 | Comando             | O que faz                       |
@@ -158,8 +168,9 @@ const quotes = await service.getQuotes({
 
 ## Limitações conhecidas (por ser boilerplate)
 
-- Cache em memória (não compartilhado entre instâncias);
-- Sem rate limiting nem autenticação no endpoint público adicione antes de
-  expor na internet;
+- Cache e rate limit em memória (não compartilhados entre instâncias — use
+  Redis ao escalar horizontalmente);
+- Sem autenticação no endpoint público — adicione API key/JWT se o consumo
+  não for anônimo (veja [SECURITY.md](SECURITY.md));
 - Prazo (`/prazo`) e preço (`/preco`) são duas chamadas por serviço no CWS;
 - Sem retry/backoff nas chamadas aos Correios (timeout simples de 10s).

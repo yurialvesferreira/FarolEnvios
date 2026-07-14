@@ -5,6 +5,8 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import {
   InvalidQuoteRequestError,
   ProviderAuthError,
@@ -17,23 +19,63 @@ const publicDir = path.resolve(
   "../../public",
 );
 
+/** Limite generoso: o maior payload legítimo de cotação tem ~300 bytes. */
+const JSON_BODY_LIMIT = "10kb";
+
+export interface SecurityOptions {
+  /**
+   * Origens permitidas no CORS. `["*"]` libera qualquer origem (só para
+   * desenvolvimento). Em produção, liste os domínios do seu sistema.
+   */
+  corsOrigins: string[];
+  /**
+   * Habilite quando atrás de reverse proxy (Nginx, load balancer) para que
+   * o rate limit enxergue o IP real do cliente via X-Forwarded-For.
+   */
+  trustProxy: boolean;
+  /** Janela e teto do rate limit por IP nas rotas /api. */
+  rateLimit: { windowSeconds: number; max: number };
+}
+
 export interface CreateAppOptions {
   quoteService: QuoteService;
   providerName: string;
+  security: SecurityOptions;
 }
 
 /**
- * Camada de transporte, deliberadamente fina: parse do body, CORS e mapa
- * de erros → status. Toda regra de negócio vive em QuoteService.
+ * Camada de transporte, deliberadamente fina: parse do body, controles de
+ * segurança (headers, CORS, rate limit) e mapa de erros → status.
+ * Toda regra de negócio vive em QuoteService.
  */
-export function createApp({ quoteService, providerName }: CreateAppOptions) {
+export function createApp({
+  quoteService,
+  providerName,
+  security,
+}: CreateAppOptions) {
   const app = express();
-  app.use(express.json());
 
-  // CORS aberto para facilitar plugar o endpoint em qualquer frontend.
-  // Em produção, restrinja o origin ao(s) domínio(s) do seu sistema.
+  app.disable("x-powered-by");
+  if (security.trustProxy) {
+    app.set("trust proxy", 1);
+  }
+
+  // Cabeçalhos de segurança (CSP, X-Content-Type-Options, frameguard etc.).
+  // O frontend em public/ não usa scripts nem estilos inline, então a CSP
+  // padrão do helmet ("self") funciona sem exceções.
+  app.use(helmet());
+
+  app.use(express.json({ limit: JSON_BODY_LIMIT }));
+
+  const allowAnyOrigin = security.corsOrigins.includes("*");
   app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const origin = req.headers.origin;
+    if (allowAnyOrigin) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    } else if (origin && security.corsOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     if (req.method === "OPTIONS") {
@@ -42,6 +84,19 @@ export function createApp({ quoteService, providerName }: CreateAppOptions) {
     }
     next();
   });
+
+  app.use(
+    "/api",
+    rateLimit({
+      windowMs: security.rateLimit.windowSeconds * 1000,
+      limit: security.rateLimit.max,
+      standardHeaders: "draft-7",
+      legacyHeaders: false,
+      message: {
+        error: "Muitas requisições deste IP. Tente novamente em instantes.",
+      },
+    }),
+  );
 
   app.use(express.static(publicDir));
 
@@ -58,6 +113,8 @@ export function createApp({ quoteService, providerName }: CreateAppOptions) {
     }
   });
 
+  // Mapa de erros: detalhes técnicos ficam nos logs do servidor; o cliente
+  // recebe apenas mensagens genéricas (evita information disclosure).
   app.use(
     (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
       if (error instanceof InvalidQuoteRequestError) {
@@ -75,6 +132,22 @@ export function createApp({ quoteService, providerName }: CreateAppOptions) {
         console.error(error);
         res.status(502).json({
           error: "O provider de frete não conseguiu cotar este envio",
+        });
+        return;
+      }
+      // Erros 4xx do body-parser (JSON inválido → 400, body > limite → 413):
+      // devolve o status correto sem vazar detalhes internos.
+      const httpError = error as { status?: unknown; expose?: unknown };
+      if (
+        typeof httpError.status === "number" &&
+        httpError.status >= 400 &&
+        httpError.status < 500
+      ) {
+        res.status(httpError.status).json({
+          error:
+            httpError.status === 413
+              ? "Payload excede o tamanho máximo permitido"
+              : "Requisição malformada",
         });
         return;
       }
